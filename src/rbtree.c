@@ -1,10 +1,12 @@
 #include "rbtree.h"
 
 #include <stdlib.h>
-void rb_insert_fixup(rbtree* t, node_t* z);
 void left_rotate(rbtree *t, node_t* x);
 void right_rotate(rbtree *t, node_t* x);
 void del_node(rbtree *t,node_t *n);
+void transplant(rbtree *t, node_t *u, node_t *v);
+void rb_insert_fixup(rbtree* t, node_t* z);
+void rb_delete_fixup(rbtree *t, node_t *x);
 
 rbtree *new_rbtree(void) {
   //rbtree 사이즈 1개의 메모리를 할당하고 모두 0으로 초기화한다.
@@ -152,21 +154,147 @@ node_t *rbtree_find(const rbtree *t, const key_t key) {
 }
 
 node_t *rbtree_min(const rbtree *t) {
-  // TODO: implement find
-  return t->root;
+  if(t->root == t->nil){
+    return NULL;
+  }
+  node_t* cur = t->root;
+  while(cur->left != t->nil){
+    cur = cur->left;
+  }
+  return cur;
 }
 
 node_t *rbtree_max(const rbtree *t) {
-  // TODO: implement find
-  return t->root;
+  if(t->root == t->nil){
+    return NULL;
+  }
+  node_t*cur = t->root;
+  while(cur->right != t->nil){
+    cur = cur->right;
+  }
+  return cur;
 }
-
+void transplant(rbtree *t, node_t *u, node_t *v){
+  if(u->parent == t->nil){
+    t->root = v;
+  }else if(u == u->parent->left){
+    u->parent->left = v;
+  }else{
+    u->parent->right = v;
+  }
+  v->parent = u->parent;
+}
+void rb_delete_fixup(rbtree *t, node_t *x){
+  while(x != t->root && x->color == RBTREE_BLACK){
+    if(x == x->parent->left){
+      node_t *w = x->parent->right;
+      if(w->color == RBTREE_RED){
+        w->color = RBTREE_BLACK;
+        x->parent->color = RBTREE_RED;
+        left_rotate(t,x->parent);
+        w = x->parent->right;
+      }
+      if(w->left->color == RBTREE_BLACK && w->right->color == RBTREE_BLACK){
+        w->color = RBTREE_RED;
+        x = x->parent;
+      }else{
+        if(w->right->color == RBTREE_BLACK){
+          w->left->color = RBTREE_BLACK;
+          w->color = RBTREE_RED;
+          right_rotate(t,w);
+          w = x->parent->right;
+        }
+        w->color = x->parent->color;
+        x->parent->color = RBTREE_BLACK;
+        w->right->color = RBTREE_BLACK;
+        left_rotate(t,x->parent);
+        x = t->root;
+      }
+    }else{
+      node_t* w = x->parent->left;
+      if(w->color == RBTREE_RED){
+        w->color = RBTREE_BLACK;
+        x->parent->color = RBTREE_RED;
+        right_rotate(t,x->parent);
+        w = x->parent->left;
+      }
+      if(w->right->color == RBTREE_BLACK && w->left->color == RBTREE_BLACK){
+        w->color = RBTREE_RED;
+        x = x->parent;
+      }else{
+        if(w->left->color == RBTREE_BLACK){
+          w->right->color = RBTREE_BLACK;
+          w->color = RBTREE_RED;
+          left_rotate(t,w);
+          w = x->parent->left;
+        }
+        w->color = x->parent->color;
+        x->parent->color = RBTREE_BLACK;
+        w->left->color = RBTREE_BLACK;
+        right_rotate(t,x->parent);
+        x = t->root;
+      }
+    }
+  }
+  x->color = RBTREE_BLACK;
+}
 int rbtree_erase(rbtree *t, node_t *p) {
-  // 밥먹고 여기부터 시작
+  if (p == NULL){
+    return 0;
+  }
+  node_t *y = p;
+  node_t *x;
+  color_t y_original = y->color;
+  if(p->left == t->nil){
+    x = p->right;
+    transplant(t,p,p->right);
+  }else if(p->right == t->nil){
+    x = p->left;
+    transplant(t,p,p->left);    
+  }else{
+    y = p->right;
+    while(y->left != t->nil){
+      y = y->left;
+    }
+    y_original = y->color;
+    x = y->right;
+    if(y->parent == p){
+      x->parent = y;
+    }else{
+      transplant(t,y,y->right);
+      y->right = p->right;
+      y->right->parent = y;
+    }
+    transplant(t,p,y);
+    y->left = p->left;
+    y->left->parent = y;
+    y->color = p->color;
+  }
+  if(y_original == RBTREE_BLACK){
+    rb_delete_fixup(t,x);
+  }
+  free(p);
   return 0;
+}
+void _rbtree_to_array(const rbtree *t, node_t *cur, key_t *arr, size_t *pcnt, const size_t n){
+  if(cur == t->nil){
+    return;
+  }
+  _rbtree_to_array(t,cur->left,arr,pcnt,n);
+  if(*pcnt<n){
+    arr[(*pcnt)++] = cur->key;
+  }else{
+    return;
+  }
+  _rbtree_to_array(t,cur->right,arr,pcnt,n);
 }
 
 int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
-  // TODO: implement to_array
+  if(t->root == t->nil){
+    return 0;
+  }else{
+    size_t cnt = 0;
+    _rbtree_to_array(t,t->root,arr,&cnt,n);
+  }
   return 0;
 }
