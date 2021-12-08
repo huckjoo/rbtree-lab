@@ -297,4 +297,5 @@ int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
     _rbtree_to_array(t,t->root,arr,&cnt,n);
   }
   return 0;
+  
 }
