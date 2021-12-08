@@ -27,7 +27,7 @@ void del_node(rbtree *t,node_t *n){
   
 }
 void delete_rbtree(rbtree *t) {
-  del_node(t,t->root);
+  del_node(t,t->root); 
   free(t->nil);
   free(t);
 }
